@@ -211,6 +211,17 @@ class TestSearch:
         assert results == []
 
     @pytest.mark.anyio
+    async def test_js_gate_page_raises_runtime_error(self):
+        html = "<html><body>enablejs captcha</body></html>"
+        with respx.mock:
+            respx.get(url__startswith="https://www.google.com/search").mock(
+                return_value=httpx.Response(200, text=html)
+            )
+            async with GoogleImageSearch() as s:
+                with pytest.raises(RuntimeError, match="JS/anti-bot"):
+                    await s.search("cats")
+
+    @pytest.mark.anyio
     async def test_page_param_reflected_in_url(self):
         captured_requests = []
 

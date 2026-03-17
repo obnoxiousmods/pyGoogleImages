@@ -48,14 +48,14 @@ _DEFAULT_HEADERS: dict[str, str] = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
+        "Chrome/137.0.0.0 Safari/537.36"
     ),
     "Accept-Language": "en-US,en;q=0.9",
     "Accept": (
         "text/html,application/xhtml+xml,application/xml;"
         "q=0.9,image/webp,*/*;q=0.8"
     ),
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate",
     "DNT": "1",
 }
 
@@ -154,6 +154,11 @@ class GoogleImageSearch:
         response.raise_for_status()
 
         raw = parse_images(response.text)
+        if not raw and self._looks_like_google_js_gate(response.text):
+            raise RuntimeError(
+                "Google returned a JS/anti-bot page instead of image results. "
+                "Try a residential proxy, lower request rate, or a different IP."
+            )
         return [
             ImageResult(
                 url=item["url"],
@@ -233,3 +238,16 @@ class GoogleImageSearch:
                 "Use:  async with GoogleImageSearch() as search: ..."
             )
         return self._client
+
+    @staticmethod
+    def _looks_like_google_js_gate(html: str) -> bool:
+        """Detect Google's JS/anti-bot pages that contain no image payload."""
+        lowered = html.lower()
+        markers = (
+            "enablejs",
+            "our systems have detected unusual traffic",
+            "sorry/index",
+            "g-recaptcha",
+            "captcha",
+        )
+        return any(marker in lowered for marker in markers)

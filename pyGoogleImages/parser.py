@@ -60,9 +60,12 @@ def _strategy_script_json(html: str) -> list[dict]:
     results: list[dict] = []
     seen: set[str] = set()
 
-    for ou_m in re.finditer(r'"ou"\s*:\s*"(https?://[^"]+)"', html):
+    # Google often escapes URLs in JSON as "https:\/\/...".
+    for ou_m in re.finditer(r'"ou"\s*:\s*"((?:\\.|[^"\\])+)"', html):
         raw_url = ou_m.group(1)
         url = _clean_url(raw_url)
+        if not (url.startswith("http://") or url.startswith("https://")):
+            continue
         if not url or url in seen:
             continue
 
